@@ -13,7 +13,7 @@ to_insert AS (
     'A thief who steals corporate secrets via dreams.' AS description,
     2010::integer                                      AS release_year,
     (SELECT language_id FROM english_lang)             AS language_id,
-    NULL::integer                                      AS original_language_id,
+    NULL			                                   AS original_language_id,
     7::smallint                                        AS rental_duration,  -- 1 week
     4.99::numeric(4,2)                                 AS rental_rate,
     148::smallint                                      AS length,
@@ -63,7 +63,7 @@ RETURNING film_id, title, release_year, rental_duration, rental_rate;
 -- Quick check
 SELECT film_id, title, release_year, rental_duration, rental_rate
 FROM public.film
-WHERE title IN ('Inception','The Godfather','Ocean''s Eleven')
+WHERE UPPER(title) IN ('INCEPTION','THE GODFATHER','OCEAN''S ELEVEN')
 ORDER BY title;
 
 COMMIT;
@@ -131,7 +131,7 @@ SELECT a.first_name, a.last_name, f.title
 FROM public.film_actor fa
 INNER JOIN public.actor a ON a.actor_id = fa.actor_id
 INNER JOIN public.film f ON f.film_id = fa.film_id
-WHERE f.title IN ('Inception','The Godfather','Ocean''s Eleven')
+WHERE UPPER(f.title) IN ('INCEPTION','THE GODFATHER','OCEAN''S ELEVEN')
 ORDER BY f.title, a.last_name, a.first_name;
 
 COMMIT;
@@ -169,7 +169,7 @@ RETURNING inventory_id, film_id, store_id;
 SELECT i.inventory_id, f.title, i.store_id
 FROM public.inventory i
 INNER JOIN public.film f ON f.film_id = i.film_id
-WHERE f.title IN ('Inception','The Godfather','Ocean''s Eleven')
+WHERE UPPER(f.title) IN ('INCEPTION','THE GODFATHER','OCEAN''S ELEVEN')
 ORDER BY f.title, i.inventory_id;
 
 COMMIT;
@@ -213,7 +213,7 @@ RETURNING c.customer_id, c.first_name, c.last_name, c.email, c.address_id;
 -- Quick check
 SELECT c.customer_id, c.first_name, c.last_name, c.email, c.address_id
 FROM public.customer c
-WHERE c.first_name = 'Laurynas' AND c.last_name = 'Virsila';
+WHERE UPPER(c.first_name) = 'LAURYNAS' AND UPPER(c.last_name) = 'VIRSILA';
 
 COMMIT;
 
@@ -224,7 +224,7 @@ BEGIN;
 WITH me AS (
   SELECT c.customer_id
   FROM public.customer c
-  WHERE c.first_name = 'Laurynas' AND c.last_name = 'Virsila'
+  WHERE UPPER(c.first_name) = 'LAURYNAS' AND UPPER(c.last_name) = 'VIRSILA'
   LIMIT 1
 ),
 my_rentals AS (
@@ -242,7 +242,7 @@ RETURNING p.payment_id, p.rental_id;
 WITH me AS (
   SELECT c.customer_id
   FROM public.customer c
-  WHERE c.first_name = 'Laurynas' AND c.last_name = 'Virsila'
+  WHERE UPPER(c.first_name) = 'LAURYNAS' AND UPPER(c.last_name) = 'VIRSILA'
   LIMIT 1
 )
 DELETE FROM public.rental r
@@ -254,7 +254,7 @@ RETURNING r.rental_id;
 WITH me AS (
   SELECT c.customer_id
   FROM public.customer c
-  WHERE c.first_name = 'Laurynas' AND c.last_name = 'Virsila'
+  WHERE UPPER(c.first_name) = 'LAURYNAS' AND UPPER(c.last_name) = 'VIRSILA'
   LIMIT 1
 )
 SELECT
@@ -274,7 +274,7 @@ BEGIN;
 WITH me AS (
   SELECT c.customer_id
   FROM public.customer c
-  WHERE c.first_name = 'Laurynas' AND c.last_name = 'Virsila'
+  WHERE UPPER(c.first_name) = 'LAURYNAS' AND UPPER(c.last_name) = 'VIRSILA'
   LIMIT 1
 ),
 store_holding AS (
@@ -323,7 +323,7 @@ RETURNING rental_id, inventory_id, customer_id;
 WITH me AS (
   SELECT c.customer_id
   FROM public.customer c
-  WHERE c.first_name = 'Laurynas' AND c.last_name = 'Virsila'
+  WHERE UPPER(c.first_name) = 'LAURYNAS' AND UPPER(c.last_name) = 'VIRSILA'
   LIMIT 1
 ),
 new_rentals AS (
@@ -354,7 +354,7 @@ RETURNING payment_id, rental_id, amount;
 WITH me AS (
   SELECT c.customer_id
   FROM public.customer c
-  WHERE c.first_name = 'Laurynas' AND c.last_name = 'Virsila'
+  WHERE UPPER(c.first_name) = 'LAURYNAS' AND UPPER(c.last_name) = 'VIRSILA'
   LIMIT 1
 )
 SELECT

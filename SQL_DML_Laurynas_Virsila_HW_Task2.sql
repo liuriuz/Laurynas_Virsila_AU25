@@ -156,8 +156,11 @@ table_size:
 after DELETE 575 MB
 after VACUUM FULL 383 MB
 after TRUNCATE 0 bytes
+Table size is reduced after VACUUM FULL compared to DELETE operation due to VACUUM FULL
+operation reclaims unused space after data is deleted.
 
 Duration of each operation:
 DELETE 29s
 TRUNCATE 1.0s
+TRUNCATE is faster since removes all rows at once not like DELETE which does it row by row
 */
