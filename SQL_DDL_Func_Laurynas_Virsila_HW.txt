@@ -1,0 +1,80 @@
+
+Task 6
+
+1. film_in_stock:
+   Returns inventory items currently available for rental (TRUE/FALSE per inventory_id).
+
+2. film_not_in_stock:
+   Returns inventory items NOT available. 
+   Redundant: same logic achievable via film_in_stock = FALSE.
+
+3. inventory_in_stock:
+   Boolean function that checks whether a specific inventory copy is available.
+
+4. get_customer_balance:
+   Calculates customer balance but misses several business rules (late fees, unpaid rentals).
+   Should be extended according to the comments in the original function.
+
+5. inventory_held_by_customer:
+   Returns all inventory items currently rented by a specific customer.
+
+6. rewards_report:
+   Returns 0 rows because EXECUTE runs SQL internally but does NOT return results.
+   Corrected version uses RETURN QUERY (static SQL).
+
+7. last_day:
+   Returns the last day of the month for the given date.
+   Used in monthly reporting logic.
+
+Why rewards_report returns 0 rows?
+Because EXECUTE cannot return table rows in PL/pgSQL unless explicitly fetched into a variable.
+Dynamic SQL is unnecessary since parameters are simple integers and numerics.
+
+Corrected version uses only RETURN QUERY:
+
+CREATE OR REPLACE FUNCTION rewards_report(
+    min_monthly_purchases INT,
+    min_amount NUMERIC
+)
+RETURNS TABLE (
+    customer_id INT,
+    first_name TEXT,
+    last_name TEXT,
+    email TEXT,
+    purchases INT,
+    total_spent NUMERIC
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        c.customer_id,
+        c.first_name,
+        c.last_name,
+        c.email,
+        COUNT(p.payment_id),
+        SUM(p.amount)
+    FROM customer c
+    JOIN payment p ON p.customer_id = c.customer_id
+    WHERE DATE_TRUNC('month', p.payment_date) = DATE_TRUNC('month', CURRENT_DATE)
+    GROUP BY c.customer_id
+    HAVING COUNT(*) >= min_monthly_purchases
+       AND SUM(p.amount) >= min_amount;
+END;
+$$;
+
+Function removable:
+film_not_in_stock – redundant and duplicates existing logic.
+
+group_concat and _group_concat:
+String aggregation helper functions.
+Used to combine multiple values into one comma-separated string (e.g., actor lists).
+
+last_updated:
+Returns the last_update timestamp for a table record.
+Used in audit views and synchronization tasks.
+
+tmpSQL in rewards_report:
+Temporary dynamic SQL accumulator.
+Unnecessary because the query can be safely written as static SQL.
