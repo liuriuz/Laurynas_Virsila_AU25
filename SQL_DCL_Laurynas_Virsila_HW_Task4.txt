@@ -1,0 +1,123 @@
+Task 4
+
+1. How can one restrict access to certain columns of a database table?
+
+In PostgreSQL there are three common ways to restrict access to specific columns:
+
+1) Column-level GRANT/REVOKE
+   - PostgreSQL allows column-level privileges for SELECT, INSERT, UPDATE.
+   - Example: grant access only to non-sensitive columns:
+
+       GRANT SELECT (first_name, last_name)
+       ON public.customer
+       TO reporting_user;
+
+     In this case reporting_user cannot select other columns such as email or credit card number if they are not granted.
+
+2) Views
+   - Create a view that exposes only the allowed columns, and grant privileges on that view instead of the base table.
+   - Example:
+
+       CREATE VIEW public.customer_public_info AS
+       SELECT customer_id, first_name, last_name
+       FROM public.customer;
+
+       GRANT SELECT ON public.customer_public_info TO public_user;
+
+     Here public_user can only see the columns included in the view. Access to the base table can be restricted to more privileged roles.
+
+3) Views combined with row-level security (RLS)
+   - RLS can be used on the base table to restrict rows per user/role.
+   - The application can then use a view that selects from that table; RLS ensures that only allowed rows are visible, and the view definition controls which columns are exposed.
+
+In practice, column-level GRANTs and views are the most common tools for column-level security, often used together.
+
+
+2. What is the difference between user identification and user authentication?
+
+- Identification:
+  - The process of claiming an identity to the system.
+  - Example: sending the username "rentaluser" or "client_MARY_SMITH" to PostgreSQL.
+  - At this stage, the system only knows who the user claims to be; it has not yet verified that this is true.
+
+- Authentication:
+  - The process of verifying that the identification is genuine by checking a secret or credential.
+  - Example: PostgreSQL verifying the password for "rentaluser" using SCRAM-SHA-256, or checking a Kerberos ticket, or validating a client certificate.
+  - Only after successful authentication does PostgreSQL accept that the connection is really from that role.
+
+In short:
+- Identification = stating who you are.
+- Authentication = proving that you are that person/role.
+
+
+3. What are the recommended authentication protocols for PostgreSQL?
+
+PostgreSQL supports several authentication methods configured in the pg_hba.conf file. 
+The most recommended modern options are:
+
+1) SCRAM-SHA-256
+   - Modern, secure password-based authentication.
+   - Passwords are stored as SCRAM-SHA-256 hashes instead of older MD5 hashes.
+   - Recommended for most new deployments where password authentication is used.
+
+2) SSL/TLS + password
+   - Connections are encrypted using SSL/TLS so credentials and data are not sent in plain text.
+   - Typically combined with SCRAM-SHA-256 (or MD5 in legacy setups).
+
+3) GSSAPI / Kerberos
+   - Integrates PostgreSQL with enterprise single sign-on solutions (e.g. Active Directory).
+   - Strong authentication with centralized management of user identities.
+
+4) Client certificate authentication (cert)
+   - Authentication via X.509 client certificates.
+   - Useful in environments with a public key infrastructure (PKI).
+
+Less recommended / legacy options:
+- md5 – still widely used but weaker than SCRAM-SHA-256; suitable only in legacy systems.
+- trust – bypasses authentication entirely; should only be used for very controlled local/test environments.
+- password (clear-text) without SSL – strongly discouraged because the password travels unencrypted over the network.
+
+
+4. What is proxy authentication in PostgreSQL and what is it for?
+   Why does it make role-based access control easier to implement?
+
+Concept in PostgreSQL:
+- Proxy authentication means that a session effectively runs under a role different from the one that physically established the connection.
+- This is typically implemented with:
+  - SET ROLE role_name;
+  - or SET SESSION AUTHORIZATION role_name; (for superusers or roles with special privileges).
+
+Example:
+- An application connects as a technical role, such as app_user.
+- After authenticating the end-user in the application layer, the app decides which database role to use, for example client_MARY_SMITH.
+- The app then issues:
+
+      SET ROLE client_MARY_SMITH;
+
+- From this moment on, permissions, row-level security policies, and default privileges are evaluated as if the queries came directly from client_MARY_SMITH.
+
+What is it for?
+- It allows separation between:
+  - The connection identity (e.g. app_user used by the connection pooler).
+  - The logical application identity (e.g. client_MARY_SMITH representing a specific customer).
+- This is especially useful with connection pooling, where a small number of physical connections serve many application users.
+
+Why does this make role-based access control easier?
+- We can define roles that correspond directly to business entities, such as:
+  - client_MARY_SMITH
+  - client_JOHN_DOE
+  - analyst, auditor, support_agent, etc.
+- Permissions are defined once in the database, for example:
+
+      GRANT SELECT ON public.payment TO client_MARY_SMITH;
+      CREATE POLICY payment_client_MARY_SMITH_policy
+      ON public.payment
+      FOR SELECT TO client_MARY_SMITH
+      USING (customer_id = 1);
+
+- When the application switches to that role with SET ROLE, all built-in PostgreSQL mechanisms (GRANT/REVOKE and RLS policies) automatically enforce the correct access.
+- The application logic can remain simple: it just decides which role to assume; the database applies the security rules.
+
+In summary:
+- Proxy authentication lets a single connection user “impersonate” different roles in a controlled way.
+- This aligns perfectly with role-based access control and keeps access logic centralized inside PostgreSQL.

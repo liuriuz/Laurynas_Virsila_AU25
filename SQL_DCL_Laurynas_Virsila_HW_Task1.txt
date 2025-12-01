@@ -1,0 +1,449 @@
+Task 1
+
+1. Existing users/roles and their permissions
+1.1. List all roles defined in the cluster
+
+Query:
+
+    SELECT rolname,
+           rolsuper,
+           rolcreaterole,
+           rolcreatedb,
+           rolcanlogin,
+           rolconnlimit
+    FROM pg_roles
+    ORDER BY rolname;
+
+Output:
+
+|rolname                    |rolsuper|rolcreaterole|rolcreatedb|rolcanlogin|rolconnlimit|
+|---------------------------|--------|-------------|-----------|-----------|------------|
+|pg_checkpoint              |false   |false        |false      |false      |-1          |
+|pg_create_subscription     |false   |false        |false      |false      |-1          |
+|pg_database_owner          |false   |false        |false      |false      |-1          |
+|pg_execute_server_program  |false   |false        |false      |false      |-1          |
+|pg_maintain                |false   |false        |false      |false      |-1          |
+|pg_monitor                 |false   |false        |false      |false      |-1          |
+|pg_read_all_data           |false   |false        |false      |false      |-1          |
+|pg_read_all_settings       |false   |false        |false      |false      |-1          |
+|pg_read_all_stats          |false   |false        |false      |false      |-1          |
+|pg_read_server_files       |false   |false        |false      |false      |-1          |
+|pg_signal_backend          |false   |false        |false      |false      |-1          |
+|pg_stat_scan_tables        |false   |false        |false      |false      |-1          |
+|pg_use_reserved_connections|false   |false        |false      |false      |-1          |
+|pg_write_all_data          |false   |false        |false      |false      |-1          |
+|pg_write_server_files      |false   |false        |false      |false      |-1          |
+|postgres                   |true    |true         |true       |true       |-1          |
+
+Explanation:
+- postgres – superuser, full control over the whole cluster.
+
+1.2. Database owner and connection limit
+
+Query:
+
+    SELECT d.datname,
+           pg_get_userbyid(d.datdba) AS owner,
+           d.datconnlimit
+    FROM pg_database d
+    WHERE d.datname = 'dvd_rental';
+
+Output:
+
+|datname  |owner   |datconnlimit|
+|---------|--------|------------|
+|dvdrental|postgres|-1          |
+
+Interpretation:
+- Owner of the dvd_rental database is postgres (in my environment).
+- datconnlimit = -1 means there is no specific per-database connection limit; the global max_connections parameter applies instead.
+
+1.3. Role memberships (group roles vs members)
+
+Query:
+
+    SELECT pg_get_userbyid(roleid)  AS role_name,
+           pg_get_userbyid(member) AS member_name
+    FROM pg_auth_members
+    ORDER BY role_name, member_name;
+
+Output:
+
+|role_name           |member_name|
+|--------------------|-----------|
+|pg_read_all_settings|pg_monitor |
+|pg_read_all_stats   |pg_monitor |
+|pg_stat_scan_tables |pg_monitor |
+
+Interpretation:
+- Initially, there are no explicit group-role memberships defined for the dvdrental sample; only basic roles like postgres and PUBLIC exist.
+
+
+2. Table-level privileges
+
+To inspect what table-level privileges exist, I used the information_schema.table_privileges view.
+
+2.1. All privileges in the public schema
+
+Query:
+
+    SELECT table_schema,
+           table_name,
+           grantee,
+           privilege_type
+    FROM information_schema.table_privileges
+    WHERE table_schema = 'public'
+    ORDER BY table_name, grantee, privilege_type;
+
+Output:
+
+|table_schema|table_name     |grantee |privilege_type|
+|------------|---------------|--------|--------------|
+|public      |actor          |postgres|DELETE        |
+|public      |actor          |postgres|INSERT        |
+|public      |actor          |postgres|REFERENCES    |
+|public      |actor          |postgres|SELECT        |
+|public      |actor          |postgres|TRIGGER       |
+|public      |actor          |postgres|TRUNCATE      |
+|public      |actor          |postgres|UPDATE        |
+|public      |address        |postgres|DELETE        |
+|public      |address        |postgres|INSERT        |
+|public      |address        |postgres|REFERENCES    |
+|public      |address        |postgres|SELECT        |
+|public      |address        |postgres|TRIGGER       |
+|public      |address        |postgres|TRUNCATE      |
+|public      |address        |postgres|UPDATE        |
+|public      |auction        |postgres|DELETE        |
+|public      |auction        |postgres|INSERT        |
+|public      |auction        |postgres|REFERENCES    |
+|public      |auction        |postgres|SELECT        |
+|public      |auction        |postgres|TRIGGER       |
+|public      |auction        |postgres|TRUNCATE      |
+|public      |auction        |postgres|UPDATE        |
+|public      |auction_item   |postgres|DELETE        |
+|public      |auction_item   |postgres|INSERT        |
+|public      |auction_item   |postgres|REFERENCES    |
+|public      |auction_item   |postgres|SELECT        |
+|public      |auction_item   |postgres|TRIGGER       |
+|public      |auction_item   |postgres|TRUNCATE      |
+|public      |auction_item   |postgres|UPDATE        |
+|public      |bid            |postgres|DELETE        |
+|public      |bid            |postgres|INSERT        |
+|public      |bid            |postgres|REFERENCES    |
+|public      |bid            |postgres|SELECT        |
+|public      |bid            |postgres|TRIGGER       |
+|public      |bid            |postgres|TRUNCATE      |
+|public      |bid            |postgres|UPDATE        |
+|public      |buyer          |postgres|DELETE        |
+|public      |buyer          |postgres|INSERT        |
+|public      |buyer          |postgres|REFERENCES    |
+|public      |buyer          |postgres|SELECT        |
+|public      |buyer          |postgres|TRIGGER       |
+|public      |buyer          |postgres|TRUNCATE      |
+|public      |buyer          |postgres|UPDATE        |
+|public      |category       |postgres|DELETE        |
+|public      |category       |postgres|INSERT        |
+|public      |category       |postgres|REFERENCES    |
+|public      |category       |postgres|SELECT        |
+|public      |category       |postgres|TRIGGER       |
+|public      |category       |postgres|TRUNCATE      |
+|public      |category       |postgres|UPDATE        |
+|public      |city           |postgres|DELETE        |
+|public      |city           |postgres|INSERT        |
+|public      |city           |postgres|REFERENCES    |
+|public      |city           |postgres|SELECT        |
+|public      |city           |postgres|TRIGGER       |
+|public      |city           |postgres|TRUNCATE      |
+|public      |city           |postgres|UPDATE        |
+|public      |country        |postgres|DELETE        |
+|public      |country        |postgres|INSERT        |
+|public      |country        |postgres|REFERENCES    |
+|public      |country        |postgres|SELECT        |
+|public      |country        |postgres|TRIGGER       |
+|public      |country        |postgres|TRUNCATE      |
+|public      |country        |postgres|UPDATE        |
+|public      |customer       |postgres|DELETE        |
+|public      |customer       |postgres|INSERT        |
+|public      |customer       |postgres|REFERENCES    |
+|public      |customer       |postgres|SELECT        |
+|public      |customer       |postgres|TRIGGER       |
+|public      |customer       |postgres|TRUNCATE      |
+|public      |customer       |postgres|UPDATE        |
+|public      |employee       |postgres|DELETE        |
+|public      |employee       |postgres|INSERT        |
+|public      |employee       |postgres|REFERENCES    |
+|public      |employee       |postgres|SELECT        |
+|public      |employee       |postgres|TRIGGER       |
+|public      |employee       |postgres|TRUNCATE      |
+|public      |employee       |postgres|UPDATE        |
+|public      |film           |postgres|DELETE        |
+|public      |film           |postgres|INSERT        |
+|public      |film           |postgres|REFERENCES    |
+|public      |film           |postgres|SELECT        |
+|public      |film           |postgres|TRIGGER       |
+|public      |film           |postgres|TRUNCATE      |
+|public      |film           |postgres|UPDATE        |
+|public      |film_actor     |postgres|DELETE        |
+|public      |film_actor     |postgres|INSERT        |
+|public      |film_actor     |postgres|REFERENCES    |
+|public      |film_actor     |postgres|SELECT        |
+|public      |film_actor     |postgres|TRIGGER       |
+|public      |film_actor     |postgres|TRUNCATE      |
+|public      |film_actor     |postgres|UPDATE        |
+|public      |film_category  |postgres|DELETE        |
+|public      |film_category  |postgres|INSERT        |
+|public      |film_category  |postgres|REFERENCES    |
+|public      |film_category  |postgres|SELECT        |
+|public      |film_category  |postgres|TRIGGER       |
+|public      |film_category  |postgres|TRUNCATE      |
+|public      |film_category  |postgres|UPDATE        |
+|public      |inventory      |postgres|DELETE        |
+|public      |inventory      |postgres|INSERT        |
+|public      |inventory      |postgres|REFERENCES    |
+|public      |inventory      |postgres|SELECT        |
+|public      |inventory      |postgres|TRIGGER       |
+|public      |inventory      |postgres|TRUNCATE      |
+|public      |inventory      |postgres|UPDATE        |
+|public      |item           |postgres|DELETE        |
+|public      |item           |postgres|INSERT        |
+|public      |item           |postgres|REFERENCES    |
+|public      |item           |postgres|SELECT        |
+|public      |item           |postgres|TRIGGER       |
+|public      |item           |postgres|TRUNCATE      |
+|public      |item           |postgres|UPDATE        |
+|public      |language       |postgres|DELETE        |
+|public      |language       |postgres|INSERT        |
+|public      |language       |postgres|REFERENCES    |
+|public      |language       |postgres|SELECT        |
+|public      |language       |postgres|TRIGGER       |
+|public      |language       |postgres|TRUNCATE      |
+|public      |language       |postgres|UPDATE        |
+|public      |location       |postgres|DELETE        |
+|public      |location       |postgres|INSERT        |
+|public      |location       |postgres|REFERENCES    |
+|public      |location       |postgres|SELECT        |
+|public      |location       |postgres|TRIGGER       |
+|public      |location       |postgres|TRUNCATE      |
+|public      |location       |postgres|UPDATE        |
+|public      |lot            |postgres|DELETE        |
+|public      |lot            |postgres|INSERT        |
+|public      |lot            |postgres|REFERENCES    |
+|public      |lot            |postgres|SELECT        |
+|public      |lot            |postgres|TRIGGER       |
+|public      |lot            |postgres|TRUNCATE      |
+|public      |lot            |postgres|UPDATE        |
+|public      |payment        |postgres|DELETE        |
+|public      |payment        |postgres|INSERT        |
+|public      |payment        |postgres|REFERENCES    |
+|public      |payment        |postgres|SELECT        |
+|public      |payment        |postgres|TRIGGER       |
+|public      |payment        |postgres|TRUNCATE      |
+|public      |payment        |postgres|UPDATE        |
+|public      |rental         |postgres|DELETE        |
+|public      |rental         |postgres|INSERT        |
+|public      |rental         |postgres|REFERENCES    |
+|public      |rental         |postgres|SELECT        |
+|public      |rental         |postgres|TRIGGER       |
+|public      |rental         |postgres|TRUNCATE      |
+|public      |rental         |postgres|UPDATE        |
+|public      |sale           |postgres|DELETE        |
+|public      |sale           |postgres|INSERT        |
+|public      |sale           |postgres|REFERENCES    |
+|public      |sale           |postgres|SELECT        |
+|public      |sale           |postgres|TRIGGER       |
+|public      |sale           |postgres|TRUNCATE      |
+|public      |sale           |postgres|UPDATE        |
+|public      |seller         |postgres|DELETE        |
+|public      |seller         |postgres|INSERT        |
+|public      |seller         |postgres|REFERENCES    |
+|public      |seller         |postgres|SELECT        |
+|public      |seller         |postgres|TRIGGER       |
+|public      |seller         |postgres|TRUNCATE      |
+|public      |seller         |postgres|UPDATE        |
+|public      |staff          |postgres|DELETE        |
+|public      |staff          |postgres|INSERT        |
+|public      |staff          |postgres|REFERENCES    |
+|public      |staff          |postgres|SELECT        |
+|public      |staff          |postgres|TRIGGER       |
+|public      |staff          |postgres|TRUNCATE      |
+|public      |staff          |postgres|UPDATE        |
+|public      |store          |postgres|DELETE        |
+|public      |store          |postgres|INSERT        |
+|public      |store          |postgres|REFERENCES    |
+|public      |store          |postgres|SELECT        |
+|public      |store          |postgres|TRIGGER       |
+|public      |store          |postgres|TRUNCATE      |
+|public      |store          |postgres|UPDATE        |
+|public      |table_to_delete|postgres|DELETE        |
+|public      |table_to_delete|postgres|INSERT        |
+|public      |table_to_delete|postgres|REFERENCES    |
+|public      |table_to_delete|postgres|SELECT        |
+|public      |table_to_delete|postgres|TRIGGER       |
+|public      |table_to_delete|postgres|TRUNCATE      |
+|public      |table_to_delete|postgres|UPDATE        |
+
+Interpretation:
+- The owner (postgres) has all standard DML privileges on the tables.
+
+2.2. Focused view for the customer table
+
+Query:
+
+    SELECT table_schema,
+           table_name,
+           grantee,
+           privilege_type
+    FROM information_schema.table_privileges
+    WHERE table_schema = 'public'
+      AND table_name   = 'customer'
+    ORDER BY grantee, privilege_type;
+
+Example output:
+
+|table_schema|table_name|grantee |privilege_type|
+|------------|----------|--------|--------------|
+|public      |customer  |postgres|DELETE        |
+|public      |customer  |postgres|INSERT        |
+|public      |customer  |postgres|REFERENCES    |
+|public      |customer  |postgres|SELECT        |
+|public      |customer  |postgres|TRIGGER       |
+|public      |customer  |postgres|TRUNCATE      |
+|public      |customer  |postgres|UPDATE        |
+
+
+Interpretation:
+- postgres can fully manipulate the customer table.
+
+3. Existing row-level security (RLS) policies
+
+3.1. Check whether any tables have RLS enabled
+
+Query:
+
+    SELECT schemaname,
+           tablename,
+           rowsecurity,
+           forcero wsecurity
+    FROM pg_tables
+    WHERE schemaname = 'public'
+    ORDER BY tablename;
+
+Output:
+
+|schemaname|tablename      |rowsecurity|
+|----------|---------------|-----------|
+|public    |actor          |false      |
+|public    |address        |false      |
+|public    |auction        |false      |
+|public    |auction_item   |false      |
+|public    |bid            |false      |
+|public    |buyer          |false      |
+|public    |category       |false      |
+|public    |city           |false      |
+|public    |country        |false      |
+|public    |customer       |false      |
+|public    |employee       |false      |
+|public    |film           |false      |
+|public    |film_actor     |false      |
+|public    |film_category  |false      |
+|public    |inventory      |false      |
+|public    |item           |false      |
+|public    |language       |false      |
+|public    |location       |false      |
+|public    |lot            |false      |
+|public    |payment        |false      |
+|public    |rental         |false      |
+|public    |sale           |false      |
+|public    |seller         |false      |
+|public    |staff          |false      |
+|public    |store          |false      |
+|public    |table_to_delete|false      |
+
+
+Interpretation:
+- For the original dvdrental schema, rowsecurity is f (false) for all tables. 
+- This means row-level security was not enabled anywhere initially.
+
+3.2. Check whether any RLS policies are defined
+
+Query:
+
+    SELECT schemaname,
+           tablename,
+           policyname,
+           roles,
+           cmd,
+           qual,
+           with_check
+    FROM pg_policies
+    WHERE schemaname = 'public'
+    ORDER BY tablename, policyname;
+
+Output:
+
+    schemaname | tablename | policyname | roles | cmd | qual | with_check
+    -----------+-----------+-----------+-------+-----+------+-----------
+    (no rows)
+
+Interpretation:
+- No row-level security policies exist by default in the sample dvdrental database.
+- Access is controlled only by table/column privileges and database-level settings.
+
+
+4. Database-level settings (connection limits and authentication)
+
+4.1. Per-database connection limit
+
+Query:
+
+    SELECT datname,
+           datconnlimit
+    FROM pg_database
+    WHERE datname = 'dvd_rental';
+
+Output:
+
+    datname    | datconnlimit
+    -----------+--------------
+    dvd_rental |     -1
+
+Interpretation:
+- No explicit per-database connection limit has been set for dvd_rental (datconnlimit = -1).
+- The effective limit comes from the server-wide max_connections setting in postgresql.conf.
+
+4.2. Authentication methods (pg_hba.conf)
+
+Authentication methods are not stored in tables; they are configured in the pg_hba.conf file. Its content cannot be read directly via SQL, but a typical configuration looks similar to:
+
+    # TYPE  DATABASE   USER        ADDRESS         METHOD
+      host  all        all         127.0.0.1/32    scram-sha-256
+      host  all        all         ::1/128         scram-sha-256
+      local all        postgres                  peer
+
+Interpretation:
+- Remote connections from localhost usually authenticate with scram-sha-256 (or md5 on older setups).
+- Local postgres user might authenticate via peer, where the OS user name is mapped to the database role.
+- The exact configuration may vary by installation, but the idea is that authentication (password, scram, peer etc.) is enforced at this layer before the user even reaches the dvd_rental database.
+
+
+5. Summary of existing security precautions (before my Task 2–3 changes)
+
+- Users/Roles:
+  - At least one superuser (postgres) with full control.
+  - A database owner role for dvd_rental (in my environment this is also postgres).
+  - PUBLIC pseudo-role used for generic grants.
+
+- Permissions and table-level privileges:
+  - The owner has full privileges on all tables.
+  - PUBLIC has SELECT on most tables (including customer), so any authenticated database user can read them by default.
+  - No special fine-grained privileges were defined initially for custom roles.
+
+- Row-level security:
+  - RLS is disabled (rowsecurity = false) for all tables in the public schema.
+  - No RLS policies (pg_policies) exist in the original sample.
+
+- Database-level settings:
+  - No specific per-database connection limit (datconnlimit = -1).
+  - Authentication is handled by pg_hba.conf, typically using scram-sha-256 or md5 for password auth and possibly peer for local postgres connections.
+
+This describes the initial state of security in the dvd_rental database, before implementing the role-based model and row-level security policies in Tasks 2 and 3.
