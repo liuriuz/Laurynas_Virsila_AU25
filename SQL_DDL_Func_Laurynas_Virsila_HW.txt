@@ -1,36 +1,43 @@
-
 Task 6
 
-1. film_in_stock:
-   Returns inventory items currently available for rental (TRUE/FALSE per inventory_id).
+1) What these functions do
 
-2. film_not_in_stock:
-   Returns inventory items NOT available. 
-   Redundant: same logic achievable via film_in_stock = FALSE.
 
-3. inventory_in_stock:
-   Boolean function that checks whether a specific inventory copy is available.
+• film_in_stock  
+  Returns inventory items that are currently available for rental.  
+  Used to verify whether a film has at least one copy ready to rent.
 
-4. get_customer_balance:
-   Calculates customer balance but misses several business rules (late fees, unpaid rentals).
-   Should be extended according to the comments in the original function.
+• film_not_in_stock  
+  Returns inventory items that are not available.  
+  Mostly duplicates film_in_stock logic (inverse), so it is generally unnecessary.
 
-5. inventory_held_by_customer:
-   Returns all inventory items currently rented by a specific customer.
+• inventory_in_stock  
+  Boolean helper checking if a specific inventory copy is available.  
+  Helps avoid repeating availability logic in other functions.
 
-6. rewards_report:
-   Returns 0 rows because EXECUTE runs SQL internally but does NOT return results.
-   Corrected version uses RETURN QUERY (static SQL).
+• get_customer_balance  
+  Computes a customer's outstanding balance (charges – payments).  
+  Current implementation misses business rules such as late fees and rentals 
+  still open at the reference date.
 
-7. last_day:
-   Returns the last day of the month for the given date.
-   Used in monthly reporting logic.
+• inventory_held_by_customer  
+  Lists all inventory items currently rented (not yet returned) by a customer.  
+  Useful for customer rental tracking.
 
-Why rewards_report returns 0 rows?
-Because EXECUTE cannot return table rows in PL/pgSQL unless explicitly fetched into a variable.
-Dynamic SQL is unnecessary since parameters are simple integers and numerics.
+• rewards_report  
+  Intended to show customers who qualify for rewards based on monthly criteria.  
+  Original version returns 0 rows because EXECUTE is used without RETURN QUERY.
 
-Corrected version uses only RETURN QUERY:
+2) Why rewards_report returns 0 rows
+
+EXECUTE runs SQL internally but does NOT return rows to the caller unless  
+RETURN QUERY EXECUTE is used.
+
+Because the query structure is fixed, dynamic SQL is unnecessary.  
+Static SQL with RETURN QUERY solves the issue.
+
+
+3) Corrected rewards_report (static SQL)
 
 CREATE OR REPLACE FUNCTION rewards_report(
     min_monthly_purchases INT,
@@ -64,17 +71,31 @@ BEGIN
 END;
 $$;
 
-Function removable:
-film_not_in_stock – redundant and duplicates existing logic.
+4) Function that can be removed
 
-group_concat and _group_concat:
-String aggregation helper functions.
-Used to combine multiple values into one comma-separated string (e.g., actor lists).
+• film_not_in_stock – redundant; its logic is simply the inverse of film_in_stock.
 
-last_updated:
-Returns the last_update timestamp for a table record.
-Used in audit views and synchronization tasks.
+5) Improving get_customer_balance
 
-tmpSQL in rewards_report:
-Temporary dynamic SQL accumulator.
-Unnecessary because the query can be safely written as static SQL.
+To meet business rules, it should:
+• include late fees for overdue rentals,  
+• consider only payments up to the reference date,  
+• include unpaid rentals that are still open,  
+• ignore rentals starting after the reference date.
+
+6) group_concat and _group_concat
+
+String aggregation helpers that combine multiple row values into a single comma-separated string  
+(e.g., a list of actors for a film).  
+They act similarly to string_agg but are custom functions in the sample schema.
+
+7) last_updated function
+
+Returns the last_update timestamp of a record or set of records.  
+Used in audit queries and identifying recently modified data.
+
+8) tmpSQL in rewards_report
+
+tmpSQL stored a dynamic SQL query string.  
+Dynamic SQL is not necessary in this case, since fixed SQL with parameters is sufficient.  
+Using RETURN QUERY with static SQL is clearer and returns rows correctly.
