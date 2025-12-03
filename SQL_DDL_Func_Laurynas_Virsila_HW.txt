@@ -1,0 +1,101 @@
+Task 6
+
+1) What these functions do
+
+
+• film_in_stock  
+  Returns inventory items that are currently available for rental.  
+  Used to verify whether a film has at least one copy ready to rent.
+
+• film_not_in_stock  
+  Returns inventory items that are not available.  
+  Mostly duplicates film_in_stock logic (inverse), so it is generally unnecessary.
+
+• inventory_in_stock  
+  Boolean helper checking if a specific inventory copy is available.  
+  Helps avoid repeating availability logic in other functions.
+
+• get_customer_balance  
+  Computes a customer's outstanding balance (charges – payments).  
+  Current implementation misses business rules such as late fees and rentals 
+  still open at the reference date.
+
+• inventory_held_by_customer  
+  Lists all inventory items currently rented (not yet returned) by a customer.  
+  Useful for customer rental tracking.
+
+• rewards_report  
+  Intended to show customers who qualify for rewards based on monthly criteria.  
+  Original version returns 0 rows because EXECUTE is used without RETURN QUERY.
+
+2) Why rewards_report returns 0 rows
+
+EXECUTE runs SQL internally but does NOT return rows to the caller unless  
+RETURN QUERY EXECUTE is used.
+
+Because the query structure is fixed, dynamic SQL is unnecessary.  
+Static SQL with RETURN QUERY solves the issue.
+
+
+3) Corrected rewards_report (static SQL)
+
+CREATE OR REPLACE FUNCTION rewards_report(
+    min_monthly_purchases INT,
+    min_amount NUMERIC
+)
+RETURNS TABLE (
+    customer_id INT,
+    first_name TEXT,
+    last_name TEXT,
+    email TEXT,
+    purchases INT,
+    total_spent NUMERIC
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        c.customer_id,
+        c.first_name,
+        c.last_name,
+        c.email,
+        COUNT(p.payment_id),
+        SUM(p.amount)
+    FROM customer c
+    JOIN payment p ON p.customer_id = c.customer_id
+    WHERE DATE_TRUNC('month', p.payment_date) = DATE_TRUNC('month', CURRENT_DATE)
+    GROUP BY c.customer_id
+    HAVING COUNT(*) >= min_monthly_purchases
+       AND SUM(p.amount) >= min_amount;
+END;
+$$;
+
+4) Function that can be removed
+
+• film_not_in_stock – redundant; its logic is simply the inverse of film_in_stock.
+
+5) Improving get_customer_balance
+
+To meet business rules, it should:
+• include late fees for overdue rentals,  
+• consider only payments up to the reference date,  
+• include unpaid rentals that are still open,  
+• ignore rentals starting after the reference date.
+
+6) group_concat and _group_concat
+
+String aggregation helpers that combine multiple row values into a single comma-separated string  
+(e.g., a list of actors for a film).  
+They act similarly to string_agg but are custom functions in the sample schema.
+
+7) last_updated function
+
+Returns the last_update timestamp of a record or set of records.  
+Used in audit queries and identifying recently modified data.
+
+8) tmpSQL in rewards_report
+
+tmpSQL stored a dynamic SQL query string.  
+Dynamic SQL is not necessary in this case, since fixed SQL with parameters is sufficient.  
+Using RETURN QUERY with static SQL is clearer and returns rows correctly.
